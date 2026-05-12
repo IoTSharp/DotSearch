@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <AssemblyName>DotSearch.Hybrid</AssemblyName>
+    <RootNamespace>DotSearch.Hybrid</RootNamespace>
+    <IsPackable>true</IsPackable>
+    <Description>DotSearch hybrid search bridge: combine BM25 hits with external ranked lists via Reciprocal Rank Fusion (RRF).</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\DotSearch.Core\DotSearch.Core.csproj" />
+  </ItemGroup>
+
+</Project>

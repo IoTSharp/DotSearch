@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <AssemblyName>DotSearch.Tokenizers.Unicode</AssemblyName>
+    <RootNamespace>DotSearch.Tokenizers.Unicode</RootNamespace>
+    <IsPackable>true</IsPackable>
+    <Description>DotSearch default Unicode word-break tokenizer. Pure managed, AOT-friendly, zero external runtime dependencies.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\DotSearch.Core\DotSearch.Core.csproj" />
+  </ItemGroup>
+
+</Project>

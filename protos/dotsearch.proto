@@ -1,0 +1,131 @@
+syntax = "proto3";
+
+package dotsearch.v1;
+
+option csharp_namespace = "DotSearch.Grpc";
+
+// ============================================================================
+// DotSearch gRPC API (v0.1 草案)
+//
+// 约定：
+//   - 文档主键统一使用 string id；服务端按需要做内部映射。
+//   - 字段使用 map<string, string>，每个字段对应一段全文文本。
+//   - 查询使用结构化 Query message，避免在 proto 层引入查询字符串解析的歧义。
+//   - 评分使用 float（足够精度），rank 由客户端按 score 降序使用。
+// ============================================================================
+
+service SearchService {
+  rpc Ping(PingRequest) returns (PingResponse);
+
+  rpc CreateIndex(CreateIndexRequest) returns (CreateIndexResponse);
+  rpc DeleteIndex(DeleteIndexRequest) returns (DeleteIndexResponse);
+  rpc ListIndexes(ListIndexesRequest) returns (ListIndexesResponse);
+
+  rpc Upsert(UpsertRequest) returns (UpsertResponse);
+  rpc Delete(DeleteRequest) returns (DeleteResponse);
+
+  rpc Search(SearchRequest) returns (SearchResponse);
+}
+
+// ----------------------------------------------------------------------------
+// Health
+// ----------------------------------------------------------------------------
+
+message PingRequest {}
+message PingResponse {
+  string version = 1;
+}
+
+// ----------------------------------------------------------------------------
+// Index management
+// ----------------------------------------------------------------------------
+
+enum TokenizerKind {
+  TOKENIZER_KIND_UNSPECIFIED = 0;
+  TOKENIZER_KIND_UNICODE = 1;
+  TOKENIZER_KIND_CJK_BIGRAM = 2;
+  TOKENIZER_KIND_CHINESE = 3;
+}
+
+message CreateIndexRequest {
+  string name = 1;
+  TokenizerKind tokenizer = 2;
+}
+message CreateIndexResponse {}
+
+message DeleteIndexRequest {
+  string name = 1;
+}
+message DeleteIndexResponse {}
+
+message ListIndexesRequest {}
+message ListIndexesResponse {
+  repeated string names = 1;
+}
+
+// ----------------------------------------------------------------------------
+// Documents
+// ----------------------------------------------------------------------------
+
+message Document {
+  string id = 1;
+  map<string, string> fields = 2;
+}
+
+message UpsertRequest {
+  string index = 1;
+  repeated Document documents = 2;
+}
+message UpsertResponse {
+  int32 upserted = 1;
+}
+
+message DeleteRequest {
+  string index = 1;
+  repeated string ids = 2;
+}
+message DeleteResponse {
+  int32 deleted = 1;
+}
+
+// ----------------------------------------------------------------------------
+// Query
+// ----------------------------------------------------------------------------
+
+message TermClause {
+  string field = 1;
+  string term = 2;
+}
+
+message Query {
+  oneof clause {
+    TermClause term = 1;
+    BooleanClause boolean = 2;
+  }
+}
+
+enum BooleanOp {
+  BOOLEAN_OP_UNSPECIFIED = 0;
+  BOOLEAN_OP_AND = 1;
+  BOOLEAN_OP_OR = 2;
+}
+
+message BooleanClause {
+  BooleanOp op = 1;
+  repeated Query clauses = 2;
+}
+
+message SearchRequest {
+  string index = 1;
+  Query query = 2;
+  int32 top_k = 3;
+}
+
+message Hit {
+  string id = 1;
+  float score = 2;
+}
+
+message SearchResponse {
+  repeated Hit hits = 1;
+}

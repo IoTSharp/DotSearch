@@ -1,0 +1,18 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/DotSearch.Core/DotSearch.Core.csproj" />
+    <Project Path="src/DotSearch.Tokenizers.Unicode/DotSearch.Tokenizers.Unicode.csproj" />
+    <Project Path="src/DotSearch.Tokenizers.Cjk/DotSearch.Tokenizers.Cjk.csproj" />
+    <Project Path="src/DotSearch.Tokenizers.Jieba/DotSearch.Tokenizers.Jieba.csproj" />
+    <Project Path="src/DotSearch.Hybrid/DotSearch.Hybrid.csproj" />
+    <Project Path="src/DotSearch/DotSearch.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/DotSearch.Core.Tests/DotSearch.Core.Tests.csproj" />
+    <Project Path="tests/DotSearch.Tokenizers.Unicode.Tests/DotSearch.Tokenizers.Unicode.Tests.csproj" />
+    <Project Path="tests/DotSearch.Tokenizers.Cjk.Tests/DotSearch.Tokenizers.Cjk.Tests.csproj" />
+    <Project Path="tests/DotSearch.Tokenizers.Jieba.Tests/DotSearch.Tokenizers.Jieba.Tests.csproj" />
+    <Project Path="tests/DotSearch.Hybrid.Tests/DotSearch.Hybrid.Tests.csproj" />
+    <Project Path="tests/DotSearch.Tests/DotSearch.Tests.csproj" />
+  </Folder>
+</Solution>

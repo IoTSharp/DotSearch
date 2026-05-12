@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <AssemblyName>DotSearch.Tokenizers.Cjk</AssemblyName>
+    <RootNamespace>DotSearch.Tokenizers.Cjk</RootNamespace>
+    <IsPackable>true</IsPackable>
+    <Description>DotSearch CJK bigram tokenizer. Dictionary-free, AOT-friendly, suitable for IoT scenarios.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\DotSearch.Core\DotSearch.Core.csproj" />
+  </ItemGroup>
+
+</Project>

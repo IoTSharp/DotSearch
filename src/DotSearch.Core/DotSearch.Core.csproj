@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <AssemblyName>DotSearch.Core</AssemblyName>
+    <RootNamespace>DotSearch</RootNamespace>
+    <IsPackable>true</IsPackable>
+    <Description>DotSearch embedded full-text search engine core: inverted index, BM25 scoring, query parser and pluggable tokenizer abstractions. Pure managed, AOT-friendly, zero external runtime dependencies.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="DotSearch" />
+    <InternalsVisibleTo Include="DotSearch.Tokenizers.Unicode" />
+    <InternalsVisibleTo Include="DotSearch.Tokenizers.Cjk" />
+    <InternalsVisibleTo Include="DotSearch.Tokenizers.Jieba" />
+    <InternalsVisibleTo Include="DotSearch.Hybrid" />
+    <InternalsVisibleTo Include="DotSearch.Core.Tests" />
+    <InternalsVisibleTo Include="DotSearch.Tests" />
+    <InternalsVisibleTo Include="DotSearch.Tokenizers.Unicode.Tests" />
+    <InternalsVisibleTo Include="DotSearch.Tokenizers.Cjk.Tests" />
+    <InternalsVisibleTo Include="DotSearch.Tokenizers.Jieba.Tests" />
+    <InternalsVisibleTo Include="DotSearch.Hybrid.Tests" />
+  </ItemGroup>
+
+</Project>
