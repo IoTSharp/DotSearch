@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <AssemblyName>DotSearch.Tokenizers.Jieba</AssemblyName>
+    <RootNamespace>DotSearch.Tokenizers.Jieba</RootNamespace>
+    <IsPackable>true</IsPackable>
+    <Description>DotSearch Chinese segmenter with embedded dictionary. Pure managed, AOT-friendly.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\DotSearch.Core\DotSearch.Core.csproj" />
+  </ItemGroup>
+
+  <!--
+    词典作为 embedded resource 内嵌到程序集，启动通过 Stream 读取，
+    不走文件 I/O，AOT/单文件部署友好。
+    完整词典将在 M3 里替换为编译后的 DAT 二进制；当前为种子词表。
+  -->
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\dict.txt" LogicalName="DotSearch.Tokenizers.Jieba.Resources.dict.txt" />
+  </ItemGroup>
+
+</Project>

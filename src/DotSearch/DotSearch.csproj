@@ -1,0 +1,43 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <AssemblyName>DotSearch</AssemblyName>
+    <RootNamespace>DotSearch.Server</RootNamespace>
+    <!--
+      DotSearch 服务端宿主：托管多个嵌入式索引实例（DotSearch.Core）。
+      每个目录 = 一个 DotSearch.Core 实例；多个索引 = 多个 Core 实例。
+    -->
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+    <Description>DotSearch gRPC server host for running embedded DotSearch.Core indexes behind a remote API.</Description>
+    <NoDefaultLaunchSettingsFile>true</NoDefaultLaunchSettingsFile>
+    <PublishAot>false</PublishAot>
+    <!--
+      gRPC 服务端依赖 Grpc.AspNetCore；.NET 10 起 ASP.NET Core + Grpc.AspNetCore
+      已基本对齐 trim/AOT 分析，先打开 IsAotCompatible 让分析器在 build 阶段暴露问题。
+    -->
+    <IsAotCompatible>true</IsAotCompatible>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <ServerGarbageCollection>true</ServerGarbageCollection>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\DotSearch.Core\DotSearch.Core.csproj" />
+    <ProjectReference Include="..\DotSearch.Tokenizers.Unicode\DotSearch.Tokenizers.Unicode.csproj" />
+    <ProjectReference Include="..\DotSearch.Tokenizers.Cjk\DotSearch.Tokenizers.Cjk.csproj" />
+    <ProjectReference Include="..\DotSearch.Tokenizers.Jieba\DotSearch.Tokenizers.Jieba.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Grpc.AspNetCore" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Protobuf Include="..\..\protos\dotsearch.proto" GrpcServices="Server" Link="Protos\dotsearch.proto" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="DotSearch.Tests" />
+  </ItemGroup>
+
+</Project>
