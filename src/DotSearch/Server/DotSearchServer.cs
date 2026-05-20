@@ -32,7 +32,7 @@ public static class DotSearchServer
             });
         });
 
-        builder.Services.AddSingleton<IndexRegistry>();
+        builder.Services.AddSingleton(new IndexRegistry(dataDir));
         builder.Services.AddGrpc();
 
         WebApplication app = builder.Build();

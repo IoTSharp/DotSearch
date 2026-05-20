@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using DotSearch.Index;
+using DotSearch.Storage;
 using DotSearch.Tokenization;
 using DotSearch.Tokenizers.Cjk;
 using DotSearch.Tokenizers.Jieba;
@@ -14,7 +15,17 @@ namespace DotSearch.Server;
 internal sealed class IndexRegistry
 {
     private readonly System.Threading.Lock _lock = new();
-    private readonly Dictionary<string, InMemoryFullTextIndex> _indexes = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, IFullTextIndex> _indexes = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, TokenizerKind> _tokenizers = new(StringComparer.Ordinal);
+    private readonly string _dataDir;
+
+    public IndexRegistry(string dataDir)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(dataDir);
+        _dataDir = dataDir;
+        Directory.CreateDirectory(_dataDir);
+        LoadExistingIndexes();
+    }
 
     public bool TryCreate(string name, TokenizerKind tokenizer)
     {
@@ -24,7 +35,11 @@ internal sealed class IndexRegistry
             {
                 return false;
             }
-            _indexes[name] = new InMemoryFullTextIndex(BuildTokenizer(tokenizer));
+            string indexDirectory = GetIndexDirectory(name);
+            Directory.CreateDirectory(indexDirectory);
+            WriteTokenizer(indexDirectory, tokenizer);
+            _indexes[name] = PersistentFullTextIndex.Open(indexDirectory, BuildTokenizer(tokenizer));
+            _tokenizers[name] = tokenizer;
             return true;
         }
     }
@@ -33,7 +48,15 @@ internal sealed class IndexRegistry
     {
         lock (_lock)
         {
-            return _indexes.Remove(name);
+            bool removed = _indexes.Remove(name);
+            _tokenizers.Remove(name);
+            string directory = GetIndexDirectory(name);
+            if (Directory.Exists(directory))
+            {
+                Directory.Delete(directory, recursive: true);
+                removed = true;
+            }
+            return removed;
         }
     }
 
@@ -51,11 +74,11 @@ internal sealed class IndexRegistry
         }
     }
 
-    public InMemoryFullTextIndex? Get(string name)
+    public IFullTextIndex? Get(string name)
     {
         lock (_lock)
         {
-            return _indexes.TryGetValue(name, out InMemoryFullTextIndex? idx) ? idx : null;
+            return _indexes.TryGetValue(name, out IFullTextIndex? idx) ? idx : null;
         }
     }
 
@@ -65,4 +88,36 @@ internal sealed class IndexRegistry
         TokenizerKind.Chinese => new ChineseTokenizer(),
         _ => new UnicodeTokenizer(),
     };
+
+    private void LoadExistingIndexes()
+    {
+        foreach (string directory in Directory.EnumerateDirectories(_dataDir, "*.dsx"))
+        {
+            string name = Path.GetFileNameWithoutExtension(directory);
+            TokenizerKind tokenizer = ReadTokenizer(directory);
+            _indexes[name] = PersistentFullTextIndex.Open(directory, BuildTokenizer(tokenizer));
+            _tokenizers[name] = tokenizer;
+        }
+    }
+
+    private string GetIndexDirectory(string name) => Path.Combine(_dataDir, name + ".dsx");
+
+    private static void WriteTokenizer(string directory, TokenizerKind tokenizer)
+    {
+        File.WriteAllText(Path.Combine(directory, "tokenizer.txt"), tokenizer.ToString());
+    }
+
+    private static TokenizerKind ReadTokenizer(string directory)
+    {
+        string path = Path.Combine(directory, "tokenizer.txt");
+        if (!File.Exists(path))
+        {
+            return TokenizerKind.Unicode;
+        }
+
+        string value = File.ReadAllText(path).Trim();
+        return Enum.TryParse(value, ignoreCase: false, out TokenizerKind tokenizer)
+            ? tokenizer
+            : TokenizerKind.Unicode;
+    }
 }

@@ -57,7 +57,7 @@ internal sealed class SearchServiceImpl : SearchService.SearchServiceBase
 
     public override Task<UpsertResponse> Upsert(UpsertRequest request, ServerCallContext context)
     {
-        InMemoryFullTextIndex index = RequireIndex(request.Index);
+        IFullTextIndex index = RequireIndex(request.Index);
         int count = 0;
         foreach (DotSearch.Grpc.Document doc in request.Documents)
         {
@@ -74,7 +74,7 @@ internal sealed class SearchServiceImpl : SearchService.SearchServiceBase
 
     public override Task<DeleteResponse> Delete(DeleteRequest request, ServerCallContext context)
     {
-        InMemoryFullTextIndex index = RequireIndex(request.Index);
+        IFullTextIndex index = RequireIndex(request.Index);
         int deleted = 0;
         foreach (string id in request.Ids)
         {
@@ -88,7 +88,7 @@ internal sealed class SearchServiceImpl : SearchService.SearchServiceBase
 
     public override Task<SearchResponse> Search(SearchRequest request, ServerCallContext context)
     {
-        InMemoryFullTextIndex index = RequireIndex(request.Index);
+        IFullTextIndex index = RequireIndex(request.Index);
         if (request.Query is null)
         {
             throw new RpcException(new Status(StatusCode.InvalidArgument, "query is required."));
@@ -104,9 +104,9 @@ internal sealed class SearchServiceImpl : SearchService.SearchServiceBase
         return Task.FromResult(response);
     }
 
-    private InMemoryFullTextIndex RequireIndex(string name)
+    private IFullTextIndex RequireIndex(string name)
     {
-        InMemoryFullTextIndex? index = _registry.Get(name);
+        IFullTextIndex? index = _registry.Get(name);
         if (index is null)
         {
             throw new RpcException(new Status(StatusCode.NotFound, $"index '{name}' not found."));

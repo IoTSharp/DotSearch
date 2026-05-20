@@ -60,6 +60,26 @@ index.Index(new Document(new DocumentId("1")).Set("body", "北京天气不错"))
 
 中文分词器自带内嵌种子词典，开箱即用；完整 DAT 词典将在 M3 里替换。
 
+### 持久化目录
+
+```csharp
+using DotSearch.Index;
+using DotSearch.Query;
+using DotSearch.Storage;
+using DotSearch.Tokenizers.Unicode;
+
+var index = PersistentFullTextIndex.Open("mydb.dsx", new UnicodeTokenizer());
+index.Index(new Document(new DocumentId("1")).Set("body", "Hello persistent DotSearch"));
+
+// 稍后重开同一个目录即可恢复。
+var reopened = PersistentFullTextIndex.Open("mydb.dsx", new UnicodeTokenizer());
+var hits = reopened.Search(new TermQuery("body", "persistent"), topK: 10);
+```
+
+持久化索引使用单目录布局：`manifest.json` 记录活动段与 tombstone，`segments/*.seg`
+是不可变段文件。更新同一文档 ID 会自动 tombstone 旧版本；段数达到阈值时会触发后台合并，
+也可以显式调用 `MergeSegments()`。
+
 ### gRPC 服务端
 
 ```bash

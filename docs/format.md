@@ -1,7 +1,8 @@
 # 磁盘格式（On-Disk Format）
 
-> 本文件描述 DotSearch 的目录与段（segment）格式规范。v0.1 仅做内存索引，本文为
-> v0.2 起的持久化层定下的目标契约，开发期间允许迭代调整，正式版本固化后将给出迁移策略。
+> 本文件描述 DotSearch 的目录与段（segment）格式规范。M2 已实现单目录持久化、
+> `manifest.json`、不可变 `.seg` 段、VarInt + delta doclist、tombstone 与段合并。
+> CRC/footer、mmap、WAL 与 schema 独立文件属于后续增强项，正式版本固化后将给出迁移策略。
 
 ## 数据库 = 一个目录
 
@@ -10,18 +11,16 @@
 ```
 mydb.dsx/
 ├── manifest.json          # 数据库清单，描述所有活动段与版本号
-├── schema.json            # 字段、分词器、BM25 参数等不可在线变更的元数据
 ├── segments/
 │   ├── 0000000001.seg     # 段文件，名称为段序号
 │   ├── 0000000002.seg
 │   └── ...
-└── wal/
-    └── 0000000001.wal     # 预写日志，崩溃恢复用
+└── ...
 ```
 
 * `manifest.json`：原子覆盖写（先写临时文件 → fsync → rename）。
 * `segments/*.seg`：写入后不可变，删除通过 manifest 摘除。
-* `wal/*.wal`：仅在落段前生效；段提交后对应 WAL 段可清理。
+* `schema.json` / `wal/*.wal`：保留为后续格式增强，M2 暂不生成。
 
 ## 段（Segment）文件结构
 
@@ -29,17 +28,13 @@ mydb.dsx/
 
 ```
 +------------------+
-| Header           |  魔数 / 版本 / 段号 / 创建时间
+| Header           |  魔数 / 版本 / 段号
 +------------------+
-| Doc Store        |  docId → 外部主键 + 字段长度向量
+| Doc Store        |  docId → 外部主键 + 字段原文
 +------------------+
-| Term Dict        |  (field, term) 字典；按字典序存储，用前缀压缩
+| Field Lengths    |  field → (docId, token_count)
 +------------------+
-| Posting Lists    |  每个 term 的 (docId delta, tf) 序列
-+------------------+
-| Field Stats      |  每个字段的总长度、文档数，用于 BM25 平均长度
-+------------------+
-| Footer           |  各 section 偏移、CRC32C 校验
+| Posting Lists    |  (field, term) → (docId delta, tf)
 +------------------+
 ```
 
@@ -48,7 +43,7 @@ mydb.dsx/
 * **VarInt**：所有非负整数走 LEB128 兼容的 varint，每字节 7 bit data + 1 bit continuation。
 * **Delta encoding**：posting list 中的 docId 用相邻差值编码。
 * **小端字节序**：所有定长整型 / 浮点采用 little-endian。
-* **校验**：每个 section 末尾追加 CRC32C；footer 再做一次整体校验。
+* **校验**：M2 暂未追加 CRC32C；footer 校验留到后续格式版本。
 
 ## 词典（Term Dictionary）
 
