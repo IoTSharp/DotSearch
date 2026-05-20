@@ -11,6 +11,7 @@ public class ChineseTokenizerTests
     {
         Assert.True(ChineseDictionary.Default.Count > 0);
         Assert.True(ChineseDictionary.Default.Contains("北京"));
+        Assert.True(ChineseDictionary.Default.GetFrequency("北京") > 0);
     }
 
     [Fact]

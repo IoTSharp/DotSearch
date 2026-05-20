@@ -7,6 +7,9 @@
     <Project Path="src/DotSearch.Hybrid/DotSearch.Hybrid.csproj" />
     <Project Path="src/DotSearch/DotSearch.csproj" />
   </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/DotSearch.DictionaryCompiler/DotSearch.DictionaryCompiler.csproj" />
+  </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/DotSearch.Core.Tests/DotSearch.Core.Tests.csproj" />
     <Project Path="tests/DotSearch.Tokenizers.Unicode.Tests/DotSearch.Tokenizers.Unicode.Tests.csproj" />

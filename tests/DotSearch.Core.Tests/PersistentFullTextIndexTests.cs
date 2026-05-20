@@ -124,6 +124,26 @@ public sealed class PersistentFullTextIndexTests : IDisposable
         Assert.Equal(2, index.Search(or, topK: 10).Count);
     }
 
+    [Fact]
+    public void Phrase_and_near_queries_survive_reopen()
+    {
+        PersistentFullTextIndex index = Open();
+        index.Index(new Document(new DocumentId("phrase")).Set("body", "alpha beta gamma"));
+        index.Index(new Document(new DocumentId("near")).Set("body", "alpha x beta"));
+        index.Index(new Document(new DocumentId("miss")).Set("body", "alpha x y beta"));
+
+        PersistentFullTextIndex reopened = Open();
+
+        IReadOnlyList<SearchHit> phraseHits = reopened.Search(new PhraseQuery("body", ["alpha", "beta"]), topK: 10);
+        IReadOnlyList<SearchHit> nearHits = reopened.Search(new NearQuery("body", ["alpha", "beta"], maxDistance: 2), topK: 10);
+
+        Assert.Single(phraseHits);
+        Assert.Equal("phrase", phraseHits[0].DocumentId.Value);
+        Assert.Equal(2, nearHits.Count);
+        Assert.Contains(nearHits, hit => hit.DocumentId.Value == "phrase");
+        Assert.Contains(nearHits, hit => hit.DocumentId.Value == "near");
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_directory))

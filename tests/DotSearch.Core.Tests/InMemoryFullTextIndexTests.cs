@@ -126,6 +126,68 @@ public class InMemoryFullTextIndexTests
     }
 
     [Fact]
+    public void Phrase_query_requires_adjacent_terms()
+    {
+        InMemoryFullTextIndex index = new(new UnicodeTokenizer());
+        index.Index(new Document(new DocumentId("exact")).Set("body", "alpha beta gamma"));
+        index.Index(new Document(new DocumentId("gap")).Set("body", "alpha gamma beta"));
+
+        IReadOnlyList<SearchHit> hits = index.Search(new PhraseQuery("body", ["alpha", "beta"]), topK: 10);
+
+        Assert.Single(hits);
+        Assert.Equal("exact", hits[0].DocumentId.Value);
+    }
+
+    [Fact]
+    public void Near_query_matches_terms_inside_distance_window()
+    {
+        InMemoryFullTextIndex index = new(new UnicodeTokenizer());
+        index.Index(new Document(new DocumentId("near")).Set("body", "alpha x beta"));
+        index.Index(new Document(new DocumentId("far")).Set("body", "alpha x y beta"));
+
+        IReadOnlyList<SearchHit> hits = index.Search(new NearQuery("body", ["alpha", "beta"], maxDistance: 2), topK: 10);
+
+        Assert.Single(hits);
+        Assert.Equal("near", hits[0].DocumentId.Value);
+    }
+
+    [Fact]
+    public void Ordered_near_query_requires_term_order()
+    {
+        InMemoryFullTextIndex index = new(new UnicodeTokenizer());
+        index.Index(new Document(new DocumentId("forward")).Set("body", "alpha x beta"));
+        index.Index(new Document(new DocumentId("reverse")).Set("body", "beta x alpha"));
+
+        IReadOnlyList<SearchHit> hits = index.Search(new NearQuery("body", ["alpha", "beta"], maxDistance: 2, inOrder: true), topK: 10);
+
+        Assert.Single(hits);
+        Assert.Equal("forward", hits[0].DocumentId.Value);
+    }
+
+    [Fact]
+    public void Bm25f_field_weight_changes_ranking()
+    {
+        InMemoryFullTextIndex index = new(
+            new UnicodeTokenizer(),
+            bm25f: new DotSearch.Scoring.Bm25FOptions(new Dictionary<string, double>
+            {
+                ["title"] = 4.0,
+                ["body"] = 1.0,
+            }));
+        index.Index(new Document(new DocumentId("title-hit")).Set("title", "alpha").Set("body", "noise"));
+        index.Index(new Document(new DocumentId("body-hit")).Set("title", "noise").Set("body", "alpha alpha alpha alpha"));
+
+        OrQuery query = new(new Query.Query[]
+        {
+            new TermQuery("title", "alpha"),
+            new TermQuery("body", "alpha"),
+        });
+        IReadOnlyList<SearchHit> hits = index.Search(query, topK: 10);
+
+        Assert.Equal("title-hit", hits[0].DocumentId.Value);
+    }
+
+    [Fact]
     public void Index_rejects_empty_document_id()
     {
         Assert.Throws<ArgumentException>(() => new Document(new DocumentId(string.Empty)));

@@ -120,6 +120,14 @@ internal sealed class SearchServiceImpl : SearchService.SearchServiceBase
         {
             return new DotSearch.Query.TermQuery(term.Field, term.Term);
         }
+        if (query.Phrase is { } phrase)
+        {
+            return new DotSearch.Query.PhraseQuery(phrase.Field, phrase.Terms);
+        }
+        if (query.Near is { } near)
+        {
+            return new DotSearch.Query.NearQuery(near.Field, near.Terms, near.MaxDistance, near.InOrder);
+        }
         if (query.Boolean is { } boolean)
         {
             List<DotSearch.Query.Query> clauses = new(boolean.Clauses.Count);

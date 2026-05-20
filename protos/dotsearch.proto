@@ -97,10 +97,24 @@ message TermClause {
   string term = 2;
 }
 
+message PhraseClause {
+  string field = 1;
+  repeated string terms = 2;
+}
+
+message NearClause {
+  string field = 1;
+  repeated string terms = 2;
+  int32 max_distance = 3;
+  bool in_order = 4;
+}
+
 message Query {
   oneof clause {
     TermClause term = 1;
     BooleanClause boolean = 2;
+    PhraseClause phrase = 3;
+    NearClause near = 4;
   }
 }
 

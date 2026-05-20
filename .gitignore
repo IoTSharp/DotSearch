@@ -380,6 +380,9 @@ ASALocalRun/
 *.binlog
 MSBuild_Logs/
 
+# DotSearch generated resources
+src/DotSearch.Tokenizers.Jieba/Resources/Generated/
+
 # AWS SAM Build and Temporary Artifacts folder
 .aws-sam
 

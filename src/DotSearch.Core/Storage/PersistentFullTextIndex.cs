@@ -12,6 +12,7 @@ public sealed class PersistentFullTextIndex : IFullTextIndex, IIndexStorage
     private readonly System.Threading.Lock _lock = new();
     private readonly ITokenizer _tokenizer;
     private readonly Bm25Parameters _bm25;
+    private readonly Bm25FOptions _bm25f;
     private readonly PersistentIndexOptions _options;
     private readonly string _segmentsDirectory;
     private readonly Dictionary<long, SegmentReader> _segments = new();
@@ -34,6 +35,7 @@ public sealed class PersistentFullTextIndex : IFullTextIndex, IIndexStorage
         _segmentsDirectory = Path.Combine(Directory, "segments");
         _tokenizer = tokenizer;
         _bm25 = bm25 ?? Bm25Parameters.Default;
+        _bm25f = options?.Bm25F ?? Bm25FOptions.Default;
         _options = options ?? new PersistentIndexOptions();
 
         System.IO.Directory.CreateDirectory(Directory);
@@ -263,6 +265,7 @@ public sealed class PersistentFullTextIndex : IFullTextIndex, IIndexStorage
     {
         SegmentData data = new(id);
         Dictionary<string, Dictionary<string, Dictionary<int, int>>> postings = new(StringComparer.Ordinal);
+        Dictionary<string, Dictionary<string, Dictionary<int, List<int>>>> positions = new(StringComparer.Ordinal);
         CollectingTokenSink sink = new();
 
         for (int localId = 0; localId < documents.Count; localId++)
@@ -278,12 +281,32 @@ public sealed class PersistentFullTextIndex : IFullTextIndex, IIndexStorage
                 _tokenizer.Tokenize(field.Value.AsSpan(), sink);
 
                 int length = 0;
+                int position = -1;
                 Dictionary<string, Dictionary<int, int>> terms = GetOrCreate(postings, field.Key);
+                Dictionary<string, Dictionary<int, List<int>>> termPositionsByField = GetOrCreate(positions, field.Key);
                 foreach (Token token in sink.Tokens)
                 {
+                    int increment = token.PositionIncrement;
+                    if (increment > 0)
+                    {
+                        position += increment;
+                    }
+                    else if (length == 0)
+                    {
+                        position = 0;
+                    }
+
                     length++;
                     Dictionary<int, int> docs = GetOrCreate(terms, token.Text);
                     docs[localId] = docs.TryGetValue(localId, out int tf) ? tf + 1 : 1;
+
+                    Dictionary<int, List<int>> termPositions = GetOrCreate(termPositionsByField, token.Text);
+                    if (!termPositions.TryGetValue(localId, out List<int>? values))
+                    {
+                        values = new List<int>();
+                        termPositions[localId] = values;
+                    }
+                    values.Add(position);
                 }
 
                 Dictionary<int, int> fieldLengths = GetOrCreate(data.FieldLengths, field.Key);
@@ -295,7 +318,8 @@ public sealed class PersistentFullTextIndex : IFullTextIndex, IIndexStorage
         {
             foreach (KeyValuePair<string, Dictionary<int, int>> term in field.Value)
             {
-                data.PostingLists.Add(new SegmentPostingList(field.Key, term.Key, term.Value));
+                Dictionary<int, List<int>> termPositions = positions[field.Key][term.Key];
+                data.PostingLists.Add(new SegmentPostingList(field.Key, term.Key, term.Value, termPositions));
             }
         }
 
@@ -308,6 +332,12 @@ public sealed class PersistentFullTextIndex : IFullTextIndex, IIndexStorage
         {
             case Query.TermQuery term:
                 ScoreTerm(term, scores);
+                break;
+            case Query.PhraseQuery phrase:
+                ScorePhrase(phrase, scores);
+                break;
+            case Query.NearQuery near:
+                ScoreNear(near, scores);
                 break;
             case Query.OrQuery or:
                 foreach (Query.Query clause in or.Clauses)
@@ -384,9 +414,124 @@ public sealed class PersistentFullTextIndex : IFullTextIndex, IIndexStorage
                 }
 
                 int documentLength = lengths.TryGetValue(posting.Key, out int len) ? len : 0;
-                double score = Bm25.Score(posting.Value, documentLength, averageLength, liveDocumentCount, documentFrequency, _bm25);
+                double score = Bm25.Score(posting.Value, documentLength, averageLength, liveDocumentCount, documentFrequency, _bm25)
+                    * _bm25f.GetWeight(term.Field);
                 scores[documentId.Value] = scores.TryGetValue(documentId.Value, out double existing) ? existing + score : score;
             }
+        }
+    }
+
+    private void ScorePhrase(Query.PhraseQuery phrase, Dictionary<string, double> scores)
+    {
+        if (phrase.Terms.Count == 1)
+        {
+            ScoreTerm(new Query.TermQuery(phrase.Field, phrase.Terms[0]), scores);
+            return;
+        }
+
+        ScorePositional(phrase.Field, phrase.Terms, scores, PositionMatcher.CountPhraseMatches);
+    }
+
+    private void ScoreNear(Query.NearQuery near, Dictionary<string, double> scores)
+    {
+        if (near.Terms.Count == 1)
+        {
+            ScoreTerm(new Query.TermQuery(near.Field, near.Terms[0]), scores);
+            return;
+        }
+
+        ScorePositional(
+            near.Field,
+            near.Terms,
+            scores,
+            lists => PositionMatcher.CountNearMatches(lists, near.MaxDistance, near.InOrder));
+    }
+
+    private void ScorePositional(
+        string field,
+        IReadOnlyList<string> terms,
+        Dictionary<string, double> scores,
+        Func<List<int>[], int> matchCounter)
+    {
+        int liveDocumentCount = _liveDocuments.Count;
+        if (liveDocumentCount == 0)
+        {
+            return;
+        }
+
+        FieldStats stats = GetFieldStats(field);
+        if (stats.DocumentCount == 0)
+        {
+            return;
+        }
+
+        Dictionary<string, (int Count, int Length)> matches = new(StringComparer.Ordinal);
+        foreach (SegmentReader segment in _segments.Values)
+        {
+            Dictionary<int, List<int>>[] postings = new Dictionary<int, List<int>>[terms.Count];
+            bool segmentHasAllTerms = true;
+            for (int i = 0; i < terms.Count; i++)
+            {
+                if (!segment.TryGetPositions(field, terms[i], out Dictionary<int, List<int>>? termPositions))
+                {
+                    segmentHasAllTerms = false;
+                    break;
+                }
+                postings[i] = termPositions;
+            }
+
+            if (!segmentHasAllTerms || !segment.TryGetFieldLengths(field, out Dictionary<int, int>? lengths))
+            {
+                continue;
+            }
+
+            HashSet<int> tombstones = _tombstones[segment.Id];
+            foreach (int localId in postings[0].Keys)
+            {
+                if (tombstones.Contains(localId) || !segment.Documents.TryGetValue(localId, out DocumentId documentId))
+                {
+                    continue;
+                }
+
+                List<int>[] lists = new List<int>[postings.Length];
+                lists[0] = postings[0][localId];
+                bool allTermsMatch = true;
+                for (int i = 1; i < postings.Length; i++)
+                {
+                    if (!postings[i].TryGetValue(localId, out List<int>? values))
+                    {
+                        allTermsMatch = false;
+                        break;
+                    }
+                    lists[i] = values;
+                }
+
+                if (!allTermsMatch)
+                {
+                    continue;
+                }
+
+                int count = matchCounter(lists);
+                if (count > 0)
+                {
+                    int length = lengths.TryGetValue(localId, out int len) ? len : 0;
+                    matches[documentId.Value] = (count, length);
+                }
+            }
+        }
+
+        if (matches.Count == 0)
+        {
+            return;
+        }
+
+        double averageLength = (double)stats.TotalLength / stats.DocumentCount;
+        int documentFrequency = matches.Count;
+        double weight = _bm25f.GetWeight(field);
+        foreach (KeyValuePair<string, (int Count, int Length)> match in matches)
+        {
+            double score = Bm25.Score(match.Value.Count, match.Value.Length, averageLength, liveDocumentCount, documentFrequency, _bm25) * weight;
+            scores[match.Key] = scores.TryGetValue(match.Key, out double existing) ? existing + score : score;
         }
     }
 

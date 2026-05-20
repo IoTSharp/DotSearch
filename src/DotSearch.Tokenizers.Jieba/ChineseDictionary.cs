@@ -16,6 +16,7 @@ public sealed class ChineseDictionary
     private static readonly Lazy<ChineseDictionary> _default = new(LoadEmbedded);
 
     private readonly Dictionary<string, int> _frequencies;
+    private readonly DoubleArrayTrie? _trie;
     private readonly long _totalFrequency;
 
     private ChineseDictionary(Dictionary<string, int> frequencies)
@@ -29,6 +30,15 @@ public sealed class ChineseDictionary
         _totalFrequency = Math.Max(total, 1);
     }
 
+    private ChineseDictionary(DoubleArrayTrie trie, int count, long totalFrequency, int maxTermLength)
+    {
+        _frequencies = new Dictionary<string, int>(0, StringComparer.Ordinal);
+        _trie = trie;
+        Count = count;
+        _totalFrequency = Math.Max(totalFrequency, 1);
+        MaxTermLength = maxTermLength;
+    }
+
     /// <summary>
     /// 内嵌种子词典实例。
     /// </summary>
@@ -37,7 +47,7 @@ public sealed class ChineseDictionary
     /// <summary>
     /// 词项总数。
     /// </summary>
-    public int Count => _frequencies.Count;
+    public int Count { get; private set; }
 
     /// <summary>
     /// 词项频次之和。
@@ -47,12 +57,13 @@ public sealed class ChineseDictionary
     /// <summary>
     /// 查询某个词项的频次；未登录词返回 0。
     /// </summary>
-    public int GetFrequency(string term) => _frequencies.TryGetValue(term, out int v) ? v : 0;
+    public int GetFrequency(string term)
+        => _trie is { } trie ? trie.GetFrequency(term.AsSpan()) : _frequencies.TryGetValue(term, out int v) ? v : 0;
 
     /// <summary>
     /// 是否已登录该词项。
     /// </summary>
-    public bool Contains(string term) => _frequencies.ContainsKey(term);
+    public bool Contains(string term) => GetFrequency(term) > 0;
 
     /// <summary>
     /// 词项最大长度（字符数）。
@@ -62,6 +73,16 @@ public sealed class ChineseDictionary
     private static ChineseDictionary LoadEmbedded()
     {
         Assembly asm = typeof(ChineseDictionary).Assembly;
+        const string DatResourceName = "DotSearch.Tokenizers.Jieba.Resources.dict.dat";
+        using (Stream? datStream = asm.GetManifestResourceStream(DatResourceName))
+        {
+            if (datStream is not null)
+            {
+                DoubleArrayTrie trie = DoubleArrayTrie.Read(datStream, out int count, out long totalFrequency, out int maxTermLength);
+                return new ChineseDictionary(trie, count, totalFrequency, maxTermLength);
+            }
+        }
+
         const string ResourceName = "DotSearch.Tokenizers.Jieba.Resources.dict.txt";
         using Stream? stream = asm.GetManifestResourceStream(ResourceName)
             ?? throw new InvalidOperationException($"Embedded resource '{ResourceName}' not found.");
@@ -96,7 +117,7 @@ public sealed class ChineseDictionary
             }
         }
 
-        ChineseDictionary dict = new(map) { MaxTermLength = maxLen };
+        ChineseDictionary dict = new(map) { Count = map.Count, MaxTermLength = maxLen };
         return dict;
     }
 }

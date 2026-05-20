@@ -1,5 +1,7 @@
 namespace DotSearch.Storage;
 
+using DotSearch.Scoring;
+
 /// <summary>
 /// 持久化索引选项。
 /// </summary>
@@ -14,4 +16,9 @@ public sealed class PersistentIndexOptions
     /// 活动段数达到该阈值时触发后台合并。
     /// </summary>
     public int BackgroundMergeSegmentThreshold { get; init; } = 8;
+
+    /// <summary>
+    /// BM25F 字段权重配置。
+    /// </summary>
+    public Bm25FOptions? Bm25F { get; init; }
 }

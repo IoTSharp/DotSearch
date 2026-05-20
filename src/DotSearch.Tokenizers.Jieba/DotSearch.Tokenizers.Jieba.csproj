@@ -11,13 +11,22 @@
     <ProjectReference Include="..\DotSearch.Core\DotSearch.Core.csproj" />
   </ItemGroup>
 
-  <!--
-    词典作为 embedded resource 内嵌到程序集，启动通过 Stream 读取，
-    不走文件 I/O，AOT/单文件部署友好。
-    完整词典将在 M3 里替换为编译后的 DAT 二进制；当前为种子词表。
-  -->
+  <Target Name="CompileChineseDictionary"
+          BeforeTargets="BeforeBuild"
+          Inputs="Resources\dict.txt;..\..\tools\DotSearch.DictionaryCompiler\Program.cs"
+          Outputs="Resources\Generated\dict.dat">
+    <MakeDir Directories="Resources\Generated" />
+    <MSBuild Projects="..\..\tools\DotSearch.DictionaryCompiler\DotSearch.DictionaryCompiler.csproj"
+             Targets="Restore;Build"
+             Properties="Configuration=$(Configuration);TargetFramework=$(TargetFramework)" />
+    <Exec Command="dotnet run --no-build --project &quot;..\..\tools\DotSearch.DictionaryCompiler\DotSearch.DictionaryCompiler.csproj&quot; --configuration $(Configuration) --framework $(TargetFramework) -- &quot;Resources\dict.txt&quot; &quot;Resources\Generated\dict.dat&quot;" />
+  </Target>
+
+  <!-- 词典作为 embedded resource 内嵌到程序集，优先加载 M3 的 DAT 二进制，文本词表保留为回退源。 -->
   <ItemGroup>
     <EmbeddedResource Include="Resources\dict.txt" LogicalName="DotSearch.Tokenizers.Jieba.Resources.dict.txt" />
+    <EmbeddedResource Include="Resources\Generated\dict.dat"
+                      LogicalName="DotSearch.Tokenizers.Jieba.Resources.dict.dat" />
   </ItemGroup>
 
 </Project>

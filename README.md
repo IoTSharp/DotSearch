@@ -58,7 +58,7 @@ var index = new InMemoryFullTextIndex(new ChineseTokenizer());
 index.Index(new Document(new DocumentId("1")).Set("body", "北京天气不错"));
 ```
 
-中文分词器自带内嵌种子词典，开箱即用；完整 DAT 词典将在 M3 里替换。
+中文分词器自带内嵌词表，构建时会编译为 DAT 二进制资源，开箱即用。
 
 ### 持久化目录
 

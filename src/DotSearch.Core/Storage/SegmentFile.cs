@@ -6,7 +6,8 @@ namespace DotSearch.Storage;
 
 internal static class SegmentFile
 {
-    private static readonly byte[] Magic = "DSSEG001"u8.ToArray();
+    private static readonly byte[] MagicV1 = "DSSEG001"u8.ToArray();
+    private static readonly byte[] MagicV2 = "DSSEG002"u8.ToArray();
 
     public static SegmentReader Write(string segmentsDirectory, SegmentData data)
     {
@@ -16,7 +17,7 @@ internal static class SegmentFile
 
         using (FileStream stream = new(tempPath, FileMode.Create, FileAccess.Write, FileShare.None))
         {
-            stream.Write(Magic);
+            stream.Write(MagicV2);
             WriteInt64(stream, data.Id);
             VarInt.Write(stream, data.Documents.Count);
 
@@ -58,6 +59,20 @@ internal static class SegmentFile
                 {
                     VarInt.Write(stream, posting.Key - previousDocId);
                     VarInt.Write(stream, posting.Value);
+                    if (postingList.Positions.TryGetValue(posting.Key, out List<int>? positions))
+                    {
+                        VarInt.Write(stream, positions.Count);
+                        int previousPosition = 0;
+                        foreach (int position in positions.Order())
+                        {
+                            VarInt.Write(stream, position - previousPosition);
+                            previousPosition = position;
+                        }
+                    }
+                    else
+                    {
+                        VarInt.Write(stream, 0);
+                    }
                     previousDocId = posting.Key;
                 }
             }
@@ -75,9 +90,18 @@ internal static class SegmentFile
     public static SegmentReader Read(string path)
     {
         using FileStream stream = new(path, FileMode.Open, FileAccess.Read, FileShare.Read);
-        Span<byte> magic = stackalloc byte[Magic.Length];
+        Span<byte> magic = stackalloc byte[MagicV2.Length];
         ReadExactly(stream, magic);
-        if (!magic.SequenceEqual(Magic))
+        bool hasPositions;
+        if (magic.SequenceEqual(MagicV2))
+        {
+            hasPositions = true;
+        }
+        else if (magic.SequenceEqual(MagicV1))
+        {
+            hasPositions = false;
+        }
+        else
         {
             throw new FormatException($"Invalid segment file: {path}");
         }
@@ -118,13 +142,36 @@ internal static class SegmentFile
             string term = ReadString(stream);
             int count = VarInt.Read(stream);
             Dictionary<int, int> postings = new();
+            Dictionary<int, List<int>> positions = new();
             int docId = 0;
             for (int j = 0; j < count; j++)
             {
                 docId += VarInt.Read(stream);
-                postings[docId] = VarInt.Read(stream);
+                int termFrequency = VarInt.Read(stream);
+                postings[docId] = termFrequency;
+                if (hasPositions)
+                {
+                    int positionCount = VarInt.Read(stream);
+                    List<int> values = new(positionCount);
+                    int position = 0;
+                    for (int k = 0; k < positionCount; k++)
+                    {
+                        position += VarInt.Read(stream);
+                        values.Add(position);
+                    }
+                    positions[docId] = values;
+                }
+                else
+                {
+                    List<int> values = new(termFrequency);
+                    for (int k = 0; k < termFrequency; k++)
+                    {
+                        values.Add(k);
+                    }
+                    positions[docId] = values;
+                }
             }
-            data.PostingLists.Add(new SegmentPostingList(field, term, postings));
+            data.PostingLists.Add(new SegmentPostingList(field, term, postings, positions));
         }
 
         FileInfo file = new(path);

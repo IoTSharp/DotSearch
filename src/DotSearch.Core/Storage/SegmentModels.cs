@@ -21,11 +21,12 @@ internal sealed class SegmentDocument
 
 internal sealed class SegmentPostingList
 {
-    public SegmentPostingList(string field, string term, Dictionary<int, int> postings)
+    public SegmentPostingList(string field, string term, Dictionary<int, int> postings, Dictionary<int, List<int>>? positions = null)
     {
         Field = field;
         Term = term;
         Postings = postings;
+        Positions = positions ?? new Dictionary<int, List<int>>();
     }
 
     public string Field { get; }
@@ -33,6 +34,8 @@ internal sealed class SegmentPostingList
     public string Term { get; }
 
     public Dictionary<int, int> Postings { get; }
+
+    public Dictionary<int, List<int>> Positions { get; }
 }
 
 internal sealed class SegmentData
@@ -54,6 +57,7 @@ internal sealed class SegmentData
 internal sealed class SegmentReader
 {
     private readonly Dictionary<string, Dictionary<string, Dictionary<int, int>>> _postings = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, Dictionary<string, Dictionary<int, List<int>>>> _positions = new(StringComparer.Ordinal);
     private readonly Dictionary<string, Dictionary<int, int>> _fieldLengths = new(StringComparer.Ordinal);
     private readonly Dictionary<int, DocumentId> _documents = new();
     private readonly Dictionary<string, SegmentDocument> _documentSnapshots = new(StringComparer.Ordinal);
@@ -74,6 +78,9 @@ internal sealed class SegmentReader
         {
             Dictionary<string, Dictionary<int, int>> terms = GetOrCreate(_postings, postingList.Field);
             terms[postingList.Term] = postingList.Postings;
+
+            Dictionary<string, Dictionary<int, List<int>>> positions = GetOrCreate(_positions, postingList.Field);
+            positions[postingList.Term] = postingList.Positions;
         }
 
         foreach (KeyValuePair<string, Dictionary<int, int>> fieldLengths in data.FieldLengths)
@@ -104,6 +111,13 @@ internal sealed class SegmentReader
     public bool TryGetFieldLengths(string field, out Dictionary<int, int> lengths)
     {
         return _fieldLengths.TryGetValue(field, out lengths!);
+    }
+
+    public bool TryGetPositions(string field, string term, out Dictionary<int, List<int>> positions)
+    {
+        positions = null!;
+        return _positions.TryGetValue(field, out Dictionary<string, Dictionary<int, List<int>>>? terms)
+            && terms.TryGetValue(term, out positions!);
     }
 
     private static Dictionary<TKey, TValue> GetOrCreate<TKey, TValue>(Dictionary<string, Dictionary<TKey, TValue>> outer, string key)

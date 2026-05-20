@@ -31,4 +31,20 @@ public class QueryTests
 
         Assert.Throws<ArgumentException>(() => new AndQuery(clauses!));
     }
+
+    [Fact]
+    public void Phrase_query_snapshots_terms()
+    {
+        string[] terms = ["alpha", "beta"];
+        PhraseQuery query = new("body", terms);
+        terms[0] = "changed";
+
+        Assert.Equal("alpha", query.Terms[0]);
+    }
+
+    [Fact]
+    public void Near_query_rejects_negative_distance()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() => new NearQuery("body", ["alpha"], -1));
+    }
 }
