@@ -15,6 +15,7 @@ public sealed class Document
     /// <param name="id">文档主键。</param>
     public Document(DocumentId id)
     {
+        ArgumentException.ThrowIfNullOrEmpty(id.Value);
         Id = id;
     }
 
@@ -28,7 +29,7 @@ public sealed class Document
     /// </summary>
     public Document Set(string field, string value)
     {
-        ArgumentNullException.ThrowIfNull(field);
+        ArgumentException.ThrowIfNullOrEmpty(field);
         ArgumentNullException.ThrowIfNull(value);
         _fields[field] = value;
         return this;

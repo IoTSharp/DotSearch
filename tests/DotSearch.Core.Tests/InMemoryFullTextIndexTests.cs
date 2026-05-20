@@ -80,4 +80,62 @@ public class InMemoryFullTextIndexTests
         Assert.Single(index.Search(new TermQuery("body", "world"), topK: 10));
         Assert.Equal(1, index.DocumentCount);
     }
+
+    [Fact]
+    public void Search_respects_field_boundaries()
+    {
+        InMemoryFullTextIndex index = new(new UnicodeTokenizer());
+        index.Index(new Document(new DocumentId("1"))
+            .Set("title", "alpha")
+            .Set("body", "beta"));
+
+        IReadOnlyList<SearchHit> titleHits = index.Search(new TermQuery("title", "alpha"), topK: 10);
+        IReadOnlyList<SearchHit> bodyHits = index.Search(new TermQuery("body", "alpha"), topK: 10);
+
+        Assert.Single(titleHits);
+        Assert.Empty(bodyHits);
+    }
+
+    [Fact]
+    public void Search_limits_results_to_top_k()
+    {
+        InMemoryFullTextIndex index = new(new UnicodeTokenizer());
+        index.Index(new Document(new DocumentId("a")).Set("body", "alpha"));
+        index.Index(new Document(new DocumentId("b")).Set("body", "alpha"));
+        index.Index(new Document(new DocumentId("c")).Set("body", "alpha"));
+
+        IReadOnlyList<SearchHit> hits = index.Search(new TermQuery("body", "alpha"), topK: 2);
+
+        Assert.Equal(2, hits.Count);
+    }
+
+    [Fact]
+    public void Search_orders_equal_scores_by_document_id()
+    {
+        InMemoryFullTextIndex index = new(new UnicodeTokenizer());
+        index.Index(new Document(new DocumentId("c")).Set("body", "alpha"));
+        index.Index(new Document(new DocumentId("a")).Set("body", "alpha"));
+        index.Index(new Document(new DocumentId("b")).Set("body", "alpha"));
+
+        IReadOnlyList<SearchHit> hits = index.Search(new TermQuery("body", "alpha"), topK: 10);
+
+        Assert.Collection(hits,
+            hit => Assert.Equal("a", hit.DocumentId.Value),
+            hit => Assert.Equal("b", hit.DocumentId.Value),
+            hit => Assert.Equal("c", hit.DocumentId.Value));
+    }
+
+    [Fact]
+    public void Index_rejects_empty_document_id()
+    {
+        Assert.Throws<ArgumentException>(() => new Document(new DocumentId(string.Empty)));
+    }
+
+    [Fact]
+    public void Document_rejects_empty_field_name()
+    {
+        Document document = new(new DocumentId("1"));
+
+        Assert.Throws<ArgumentException>(() => document.Set(string.Empty, "value"));
+    }
 }

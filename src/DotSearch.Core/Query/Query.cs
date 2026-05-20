@@ -45,7 +45,16 @@ public sealed class OrQuery : Query
     public OrQuery(IReadOnlyList<Query> clauses)
     {
         ArgumentNullException.ThrowIfNull(clauses);
-        Clauses = clauses;
+        Query[] snapshot = new Query[clauses.Count];
+        for (int i = 0; i < clauses.Count; i++)
+        {
+            if (clauses[i] is not { } clause)
+            {
+                throw new ArgumentException("Clauses cannot contain null.", nameof(clauses));
+            }
+            snapshot[i] = clause;
+        }
+        Clauses = Array.AsReadOnly(snapshot);
     }
 
     /// <summary>子句列表。</summary>
@@ -63,7 +72,16 @@ public sealed class AndQuery : Query
     public AndQuery(IReadOnlyList<Query> clauses)
     {
         ArgumentNullException.ThrowIfNull(clauses);
-        Clauses = clauses;
+        Query[] snapshot = new Query[clauses.Count];
+        for (int i = 0; i < clauses.Count; i++)
+        {
+            if (clauses[i] is not { } clause)
+            {
+                throw new ArgumentException("Clauses cannot contain null.", nameof(clauses));
+            }
+            snapshot[i] = clause;
+        }
+        Clauses = Array.AsReadOnly(snapshot);
     }
 
     /// <summary>子句列表。</summary>

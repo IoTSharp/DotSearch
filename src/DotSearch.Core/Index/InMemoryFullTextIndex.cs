@@ -148,7 +148,13 @@ public sealed class InMemoryFullTextIndex : IFullTextIndex
                 }
             }
 
-            hits.Sort(static (a, b) => b.Score.CompareTo(a.Score));
+            hits.Sort(static (a, b) =>
+            {
+                int scoreCompare = b.Score.CompareTo(a.Score);
+                return scoreCompare != 0
+                    ? scoreCompare
+                    : string.CompareOrdinal(a.DocumentId.Value, b.DocumentId.Value);
+            });
             if (hits.Count > topK)
             {
                 hits.RemoveRange(topK, hits.Count - topK);
