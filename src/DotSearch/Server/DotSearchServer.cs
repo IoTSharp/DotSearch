@@ -16,27 +16,56 @@ public static class DotSearchServer
     /// <param name="port">监听端口。</param>
     /// <param name="args">命令行参数透传给 <see cref="WebApplication.CreateBuilder(string[])"/>。</param>
     public static WebApplication Build(string dataDir, int port, string[] args)
+        => Build(new DotSearchServerOptions { DataDirectory = dataDir, Port = port }, args);
+
+    /// <summary>
+    /// 构建一个 DotSearch gRPC <see cref="WebApplication"/>。
+    /// </summary>
+    public static WebApplication Build(DotSearchServerOptions options, string[] args)
     {
-        ArgumentException.ThrowIfNullOrEmpty(dataDir);
-        if (port <= 0)
+        ArgumentNullException.ThrowIfNull(options);
+        ArgumentException.ThrowIfNullOrEmpty(options.DataDirectory);
+        if (options.Port <= 0)
         {
-            throw new ArgumentOutOfRangeException(nameof(port));
+            throw new ArgumentOutOfRangeException(nameof(options), options.Port, "Port must be positive.");
         }
 
         WebApplicationBuilder builder = WebApplication.CreateSlimBuilder(args);
-        builder.WebHost.ConfigureKestrel(options =>
+        builder.WebHost.ConfigureKestrel(kestrel =>
         {
-            options.ListenAnyIP(port, listen =>
+            kestrel.ListenAnyIP(options.Port, listen =>
             {
                 listen.Protocols = Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http2;
             });
         });
 
-        builder.Services.AddSingleton(new IndexRegistry(dataDir));
-        builder.Services.AddGrpc();
+        builder.Services.AddSingleton(options);
+        builder.Services.AddSingleton(new IndexRegistry(options.DataDirectory));
+        builder.Services.AddGrpc(grpc =>
+        {
+            grpc.Interceptors.Add<ApiKeyInterceptor>();
+        });
+        builder.Services.AddSingleton(new ApiKeyInterceptor(options.ApiKey));
 
         WebApplication app = builder.Build();
         app.MapGrpcService<SearchServiceImpl>();
+        app.MapMethods("/", ["GET"], static context =>
+        {
+            context.Response.ContentType = "text/plain";
+            return context.Response.WriteAsync("DotSearch gRPC server is running.");
+        });
+        app.MapMethods("/healthz", ["GET"], context =>
+        {
+            context.Response.ContentType = "text/plain";
+            string body = string.IsNullOrEmpty(options.ApiKey)
+                ? "ok apiKeyRequired=false"
+                : "ok apiKeyRequired=true";
+            if (options.RequireClientCertificate)
+            {
+                body += " mtlsRequired=true";
+            }
+            return context.Response.WriteAsync(body);
+        });
         return app;
     }
 }

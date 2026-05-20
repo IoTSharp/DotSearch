@@ -1,0 +1,19 @@
+services:
+  dotsearch:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: iotsharp/dotsearch:dev
+    environment:
+      DOTSEARCH_DATA_DIR: /data
+      DOTSEARCH_PORT: "5280"
+      # DOTSEARCH_API_KEY: change-me
+      # DOTSEARCH_REQUIRE_CLIENT_CERT: "false"
+    ports:
+      - "5280:5280"
+    volumes:
+      - dotsearch-data:/data
+    restart: unless-stopped
+
+volumes:
+  dotsearch-data:

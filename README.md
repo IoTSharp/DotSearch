@@ -94,6 +94,17 @@ export DOTSEARCH_PORT=5280
 dotnet run --project src/DotSearch
 ```
 
+设置 `DOTSEARCH_API_KEY` 后，所有 gRPC 请求都需要携带 `x-api-key` metadata。`DOTSEARCH_REQUIRE_CLIENT_CERT`
+是 mTLS 策略占位开关，当前用于部署配置显式化。
+
+Docker 运行：
+
+```bash
+docker compose up --build
+```
+
+默认容器监听 `5280`，数据卷挂载到 `/data`。
+
 ## 📂 仓库结构
 
 ```
@@ -105,6 +116,8 @@ DotSearch/
 │   ├── DotSearch.Tokenizers.Jieba   # 中文分词器（内嵌词典）
 │   ├── DotSearch.Hybrid             # RRF 融合外部排序源
 │   └── DotSearch                    # gRPC 服务端宿主
+├── Dockerfile                       # 服务端镜像
+├── docker-compose.yml               # 本地容器运行配置
 ├── tests/                           # 单元测试
 ├── docs/                            # 架构、磁盘格式、AOT 策略
 ├── protos/                          # gRPC 协议定义

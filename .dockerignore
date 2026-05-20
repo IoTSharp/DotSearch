@@ -1,0 +1,14 @@
+**/bin/
+**/obj/
+**/.vs/
+**/.vscode/
+**/TestResults/
+artifacts/
+.artifacts/
+.git/
+.gitignore
+*.user
+*.suo
+*.nupkg
+*.snupkg
+*.binlog
