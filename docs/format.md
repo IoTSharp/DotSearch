@@ -1,7 +1,7 @@
 # 磁盘格式（On-Disk Format）
 
-> 本文件描述 DotSearch 的目录与段（segment）格式规范。M2 已实现单目录持久化、
-> `manifest.json`、不可变 `.seg` 段、VarInt + delta doclist、tombstone 与段合并。
+> 本文件描述 DotSearch 的目录与段（segment）格式规范。当前实现包含单目录持久化、
+> `manifest.json`、不可变 `.seg` 段、VarInt + delta doclist、positions、tombstone 与段合并。
 > CRC/footer、mmap、WAL 与 schema 独立文件属于后续增强项，正式版本固化后将给出迁移策略。
 
 ## 数据库 = 一个目录
@@ -20,7 +20,7 @@ mydb.dsx/
 
 * `manifest.json`：原子覆盖写（先写临时文件 → fsync → rename）。
 * `segments/*.seg`：写入后不可变，删除通过 manifest 摘除。
-* `schema.json` / `wal/*.wal`：保留为后续格式增强，M2 暂不生成。
+* `schema.json` / `wal/*.wal`：保留为后续格式增强，当前暂不生成。
 
 ## 段（Segment）文件结构
 
@@ -34,22 +34,42 @@ mydb.dsx/
 +------------------+
 | Field Lengths    |  field → (docId, token_count)
 +------------------+
-| Posting Lists    |  (field, term) → (docId delta, tf)
+| Posting Lists    |  (field, term) → (docId delta, tf, positions)
 +------------------+
 ```
 
 ### 编码规则
 
 * **VarInt**：所有非负整数走 LEB128 兼容的 varint，每字节 7 bit data + 1 bit continuation。
-* **Delta encoding**：posting list 中的 docId 用相邻差值编码。
+* **Delta encoding**：posting list 中的 docId 与 positions 用相邻差值编码。
 * **小端字节序**：所有定长整型 / 浮点采用 little-endian。
-* **校验**：M2 暂未追加 CRC32C；footer 校验留到后续格式版本。
+* **校验**：当前暂未追加 CRC32C；footer 校验留到后续格式版本。
+
+### Segment Magic
+
+* `DSSEG001`：M2 初始段格式，仅包含 `(docId delta, tf)`。
+* `DSSEG002`：M3 起的段格式，posting 内追加 positions。读取器兼容 `DSSEG001`，
+  但新写入统一使用 `DSSEG002`。
+
+### Posting List Entry
+
+`DSSEG002` 中每个 term 的 posting entry 结构为：
+
+```
+doc_delta
+term_frequency
+position_count
+position_delta*
+```
+
+positions 用 token position 记录，支持短语查询与 NEAR 查询。`position_count` 通常等于
+`term_frequency`。
 
 ## 词典（Term Dictionary）
 
-* 每个 (field, term) 对应一个 entry，记录 posting list 的偏移、长度、df。
-* 词项按 UTF-8 字典序排列，使用前缀压缩节省空间。
-* 段加载时构造一个排序数组，运行时按二分查找定位 term。
+* 当前段文件按 `(field, term)` 顺序写出 posting list。
+* 段加载时构造内存字典，运行时按 `(field, term)` 定位 posting list。
+* 后续可在兼容格式中引入独立 term dictionary section，以支持 mmap 与二分查找。
 
 ## 删除（Tombstones）
 

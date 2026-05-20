@@ -1,5 +1,6 @@
 using DotSearch.Grpc;
 using DotSearch.Server;
+using Grpc.Core;
 using Xunit;
 
 namespace DotSearch.Tests;
@@ -69,6 +70,20 @@ public sealed class SearchServiceImplTests : IDisposable
 
         await service.DeleteIndex(new DeleteIndexRequest { Name = "main" }, TestServerCallContext.Create());
         Assert.Empty(registry.List());
+    }
+
+    [Fact]
+    public async Task Create_index_rejects_unsafe_name()
+    {
+        SearchServiceImpl service = new(new IndexRegistry(_directory));
+
+        RpcException ex = await Assert.ThrowsAsync<RpcException>(() => service.CreateIndex(new CreateIndexRequest
+        {
+            Name = "../escape",
+            Tokenizer = TokenizerKind.Unicode,
+        }, TestServerCallContext.Create()));
+
+        Assert.Equal(StatusCode.InvalidArgument, ex.StatusCode);
     }
 
     public void Dispose()

@@ -80,6 +80,27 @@ var hits = reopened.Search(new TermQuery("body", "persistent"), topK: 10);
 是不可变段文件。更新同一文档 ID 会自动 tombstone 旧版本；段数达到阈值时会触发后台合并，
 也可以显式调用 `MergeSegments()`。
 
+### Hybrid 融合
+
+```csharp
+using DotSearch.Hybrid;
+using DotSearch.Index;
+using DotSearch.Query;
+
+var fullText = new FullTextRankedSource<string>(
+    index,
+    queryText => new TermQuery("body", queryText));
+
+var vector = new DelegateRankedSource<string>(
+    "vector",
+    (queryText, topK) => externalVectorSearch(queryText, topK));
+
+var pipeline = new HybridSearchPipeline<string>(new IRankedSource<string>[] { fullText, vector });
+var fused = pipeline.Search("dotsearch", topK: 10, sourceTopK: 50);
+```
+
+`DotSearch.Hybrid` 不绑定任何向量数据库；外部检索只需返回按相关性降序排列的 `SearchHit` 列表。
+
 ### gRPC 服务端
 
 ```bash
@@ -119,6 +140,7 @@ DotSearch/
 ├── Dockerfile                       # 服务端镜像
 ├── docker-compose.yml               # 本地容器运行配置
 ├── tests/                           # 单元测试
+├── benchmarks/                      # BenchmarkDotNet 与 M6 验证报告
 ├── docs/                            # 架构、磁盘格式、AOT 策略
 ├── protos/                          # gRPC 协议定义
 └── ROADMAP.md                       # 路线图

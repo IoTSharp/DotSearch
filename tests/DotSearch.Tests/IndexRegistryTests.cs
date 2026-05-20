@@ -42,6 +42,17 @@ public sealed class IndexRegistryTests : IDisposable
         Assert.Null(reopened.Get("main"));
     }
 
+    [Fact]
+    public void Registry_rejects_unsafe_index_names()
+    {
+        IndexRegistry registry = new(_directory);
+
+        Assert.False(registry.TryCreate("../escape", TokenizerKind.Unicode));
+        Assert.False(registry.TryCreate("nested/name", TokenizerKind.Unicode));
+        Assert.Null(registry.Get("../escape"));
+        Assert.False(Directory.Exists(Path.Combine(_directory, "..", "escape.dsx")));
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_directory))

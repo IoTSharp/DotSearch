@@ -28,9 +28,9 @@ internal sealed class SearchServiceImpl : SearchService.SearchServiceBase
 
     public override Task<CreateIndexResponse> CreateIndex(CreateIndexRequest request, ServerCallContext context)
     {
-        if (string.IsNullOrEmpty(request.Name))
+        if (!IndexRegistry.IsValidIndexName(request.Name))
         {
-            throw new RpcException(new Status(StatusCode.InvalidArgument, "name is required."));
+            throw new RpcException(new Status(StatusCode.InvalidArgument, "name must contain only letters, digits, '-' or '_' and be at most 128 characters."));
         }
         if (!_registry.TryCreate(request.Name, request.Tokenizer))
         {

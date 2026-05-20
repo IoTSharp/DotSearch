@@ -36,4 +36,30 @@ public class ReciprocalRankFusionTests
     {
         Assert.Empty(ReciprocalRankFusion.Fuse(Array.Empty<IReadOnlyList<SearchHit>>(), topK: 5));
     }
+
+    [Fact]
+    public void Equal_scores_are_ordered_by_document_id()
+    {
+        SearchHit[] listA =
+        {
+            new(new DocumentId("b"), 1),
+        };
+        SearchHit[] listB =
+        {
+            new(new DocumentId("a"), 1),
+        };
+
+        IReadOnlyList<SearchHit> fused = ReciprocalRankFusion.Fuse(new[] { listA, listB }, topK: 2);
+
+        Assert.Collection(fused,
+            hit => Assert.Equal("a", hit.DocumentId.Value),
+            hit => Assert.Equal("b", hit.DocumentId.Value));
+    }
+
+    [Fact]
+    public void Non_positive_k_is_rejected()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            ReciprocalRankFusion.Fuse(Array.Empty<IReadOnlyList<SearchHit>>(), topK: 5, k: 0));
+    }
 }

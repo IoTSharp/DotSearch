@@ -29,6 +29,11 @@ internal sealed class IndexRegistry
 
     public bool TryCreate(string name, TokenizerKind tokenizer)
     {
+        if (!IsValidIndexName(name))
+        {
+            return false;
+        }
+
         lock (_lock)
         {
             if (_indexes.ContainsKey(name))
@@ -46,6 +51,11 @@ internal sealed class IndexRegistry
 
     public bool TryDelete(string name)
     {
+        if (!IsValidIndexName(name))
+        {
+            return false;
+        }
+
         lock (_lock)
         {
             bool removed = _indexes.Remove(name);
@@ -76,6 +86,11 @@ internal sealed class IndexRegistry
 
     public IFullTextIndex? Get(string name)
     {
+        if (!IsValidIndexName(name))
+        {
+            return null;
+        }
+
         lock (_lock)
         {
             return _indexes.TryGetValue(name, out IFullTextIndex? idx) ? idx : null;
@@ -101,6 +116,30 @@ internal sealed class IndexRegistry
     }
 
     private string GetIndexDirectory(string name) => Path.Combine(_dataDir, name + ".dsx");
+
+    public static bool IsValidIndexName(string name)
+    {
+        if (string.IsNullOrEmpty(name) || name.Length > 128)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < name.Length; i++)
+        {
+            char c = name[i];
+            bool valid = (c >= 'A' && c <= 'Z')
+                || (c >= 'a' && c <= 'z')
+                || (c >= '0' && c <= '9')
+                || c == '_'
+                || c == '-';
+            if (!valid)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
 
     private static void WriteTokenizer(string directory, TokenizerKind tokenizer)
     {

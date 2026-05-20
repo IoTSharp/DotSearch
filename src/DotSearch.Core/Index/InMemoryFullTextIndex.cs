@@ -5,18 +5,17 @@ using DotSearch.Tokenization;
 namespace DotSearch.Index;
 
 /// <summary>
-/// 单段、内存常驻的倒排索引，作为 v0.1 MVP。
+/// 单段、内存常驻的倒排索引。
 /// </summary>
 /// <remarks>
 /// <para>实现仅满足以下能力：</para>
 /// <list type="bullet">
-///   <item>按 (field, term) 维护 posting list（doc -> tf）。</item>
+///   <item>按 (field, term) 维护 posting list（doc -> tf + positions）。</item>
 ///   <item>统计每个 (doc, field) 的长度，用于 BM25 长度归一化。</item>
-///   <item>支持 <see cref="Query.TermQuery"/> / <see cref="Query.AndQuery"/> / <see cref="Query.OrQuery"/>。</item>
+///   <item>支持 term / phrase / NEAR / AND / OR 查询。</item>
 ///   <item>删除采用 tombstone：保留 docId，但在结果中跳过。</item>
 /// </list>
-/// <para>并发安全性：内部使用 <see cref="System.Threading.Lock"/> 串行化写入与查询，简单但够 MVP 用。
-/// 高并发与持久化在 v0.2 引入段格式后再做。</para>
+/// <para>并发安全性：内部使用 <see cref="System.Threading.Lock"/> 串行化写入与查询。</para>
 /// </remarks>
 public sealed class InMemoryFullTextIndex : IFullTextIndex
 {

@@ -5,7 +5,7 @@ package dotsearch.v1;
 option csharp_namespace = "DotSearch.Grpc";
 
 // ============================================================================
-// DotSearch gRPC API (v0.1 草案)
+// DotSearch gRPC API
 //
 // 约定：
 //   - 文档主键统一使用 string id；服务端按需要做内部映射。

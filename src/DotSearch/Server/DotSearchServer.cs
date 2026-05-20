@@ -12,7 +12,7 @@ public static class DotSearchServer
     /// <summary>
     /// 构建一个监听 <paramref name="port"/> 的 gRPC <see cref="WebApplication"/>。
     /// </summary>
-    /// <param name="dataDir">数据库根目录（v0.1 仅用于日志，实际持久化在 v0.2 引入）。</param>
+    /// <param name="dataDir">数据库根目录。</param>
     /// <param name="port">监听端口。</param>
     /// <param name="args">命令行参数透传给 <see cref="WebApplication.CreateBuilder(string[])"/>。</param>
     public static WebApplication Build(string dataDir, int port, string[] args)

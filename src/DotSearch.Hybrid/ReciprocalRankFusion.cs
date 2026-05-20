@@ -30,13 +30,13 @@ public static class ReciprocalRankFusion
         int k = DefaultK)
     {
         ArgumentNullException.ThrowIfNull(rankedLists);
-        if (topK <= 0 || rankedLists.Count == 0)
-        {
-            return Array.Empty<SearchHit>();
-        }
         if (k <= 0)
         {
             throw new ArgumentOutOfRangeException(nameof(k), "k must be positive.");
+        }
+        if (topK <= 0 || rankedLists.Count == 0)
+        {
+            return Array.Empty<SearchHit>();
         }
 
         Dictionary<string, double> scores = new(StringComparer.Ordinal);
@@ -59,7 +59,13 @@ public static class ReciprocalRankFusion
         {
             result.Add(new SearchHit(ids[kv.Key], kv.Value));
         }
-        result.Sort(static (a, b) => b.Score.CompareTo(a.Score));
+        result.Sort(static (a, b) =>
+        {
+            int scoreCompare = b.Score.CompareTo(a.Score);
+            return scoreCompare != 0
+                ? scoreCompare
+                : string.CompareOrdinal(a.DocumentId.Value, b.DocumentId.Value);
+        });
         if (result.Count > topK)
         {
             result.RemoveRange(topK, result.Count - topK);

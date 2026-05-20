@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>DotSearch.Benchmarks</AssemblyName>
+    <RootNamespace>DotSearch.Benchmarks</RootNamespace>
+    <IsPackable>false</IsPackable>
+    <IsAotCompatible>false</IsAotCompatible>
+    <EnableTrimAnalyzer>false</EnableTrimAnalyzer>
+    <EnableAotAnalyzer>false</EnableAotAnalyzer>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BenchmarkDotNet" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\DotSearch.Core\DotSearch.Core.csproj" />
+    <ProjectReference Include="..\..\src\DotSearch.Tokenizers.Unicode\DotSearch.Tokenizers.Unicode.csproj" />
+    <ProjectReference Include="..\..\src\DotSearch.Hybrid\DotSearch.Hybrid.csproj" />
+  </ItemGroup>
+
+</Project>
