@@ -26,7 +26,7 @@
     <MakeDir Directories="$(MSBuildThisFileDirectory)Resources/Generated" />
     <MSBuild Projects="$(JiebaDictionaryCompilerProject)"
              Targets="Restore;Build"
-             Properties="Configuration=$(Configuration);TargetFramework=$(TargetFramework);RuntimeIdentifier=;SelfContained=false;OutputPath=$(JiebaDictionaryCompilerOutput)" />
+             Properties="Configuration=$(Configuration);TargetFramework=$(TargetFramework);RuntimeIdentifier=;SelfContained=false;PublishAot=false;OutputPath=$(JiebaDictionaryCompilerOutput)" />
     <Exec Command="dotnet &quot;$(JiebaDictionaryCompilerDll)&quot; &quot;$(JiebaDictionaryText)&quot; &quot;$(JiebaDictionaryDat)&quot;" />
   </Target>
 
