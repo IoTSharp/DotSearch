@@ -11,15 +11,22 @@
     <ProjectReference Include="..\DotSearch.Core\DotSearch.Core.csproj" />
   </ItemGroup>
 
+  <PropertyGroup>
+    <JiebaDictionaryCompilerProject>$(MSBuildThisFileDirectory)../../tools/DotSearch.DictionaryCompiler/DotSearch.DictionaryCompiler.csproj</JiebaDictionaryCompilerProject>
+    <JiebaDictionaryCompilerDll>$(MSBuildThisFileDirectory)../../tools/DotSearch.DictionaryCompiler/bin/$(Configuration)/$(TargetFramework)/DotSearch.DictionaryCompiler.dll</JiebaDictionaryCompilerDll>
+    <JiebaDictionaryText>$(MSBuildThisFileDirectory)Resources/dict.txt</JiebaDictionaryText>
+    <JiebaDictionaryDat>$(MSBuildThisFileDirectory)Resources/Generated/dict.dat</JiebaDictionaryDat>
+  </PropertyGroup>
+
   <Target Name="CompileChineseDictionary"
           BeforeTargets="BeforeBuild"
-          Inputs="Resources\dict.txt;..\..\tools\DotSearch.DictionaryCompiler\Program.cs"
-          Outputs="Resources\Generated\dict.dat">
-    <MakeDir Directories="Resources\Generated" />
-    <MSBuild Projects="..\..\tools\DotSearch.DictionaryCompiler\DotSearch.DictionaryCompiler.csproj"
+          Inputs="$(JiebaDictionaryText);$(MSBuildThisFileDirectory)../../tools/DotSearch.DictionaryCompiler/Program.cs"
+          Outputs="$(JiebaDictionaryDat)">
+    <MakeDir Directories="$(MSBuildThisFileDirectory)Resources/Generated" />
+    <MSBuild Projects="$(JiebaDictionaryCompilerProject)"
              Targets="Restore;Build"
              Properties="Configuration=$(Configuration);TargetFramework=$(TargetFramework)" />
-    <Exec Command="dotnet run --no-build --project &quot;..\..\tools\DotSearch.DictionaryCompiler\DotSearch.DictionaryCompiler.csproj&quot; --configuration $(Configuration) --framework $(TargetFramework) -- &quot;Resources\dict.txt&quot; &quot;Resources\Generated\dict.dat&quot;" />
+    <Exec Command="dotnet &quot;$(JiebaDictionaryCompilerDll)&quot; &quot;$(JiebaDictionaryText)&quot; &quot;$(JiebaDictionaryDat)&quot;" />
   </Target>
 
   <!-- 词典作为 embedded resource 内嵌到程序集，优先加载 M3 的 DAT 二进制，文本词表保留为回退源。 -->
