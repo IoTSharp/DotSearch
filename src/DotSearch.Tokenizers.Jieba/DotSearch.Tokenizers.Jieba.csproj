@@ -13,7 +13,8 @@
 
   <PropertyGroup>
     <JiebaDictionaryCompilerProject>$(MSBuildThisFileDirectory)../../tools/DotSearch.DictionaryCompiler/DotSearch.DictionaryCompiler.csproj</JiebaDictionaryCompilerProject>
-    <JiebaDictionaryCompilerDll>$(MSBuildThisFileDirectory)../../tools/DotSearch.DictionaryCompiler/bin/$(Configuration)/$(TargetFramework)/DotSearch.DictionaryCompiler.dll</JiebaDictionaryCompilerDll>
+    <JiebaDictionaryCompilerOutput>$(MSBuildThisFileDirectory)../../tools/DotSearch.DictionaryCompiler/bin/$(Configuration)/$(TargetFramework)/</JiebaDictionaryCompilerOutput>
+    <JiebaDictionaryCompilerDll>$(JiebaDictionaryCompilerOutput)DotSearch.DictionaryCompiler.dll</JiebaDictionaryCompilerDll>
     <JiebaDictionaryText>$(MSBuildThisFileDirectory)Resources/dict.txt</JiebaDictionaryText>
     <JiebaDictionaryDat>$(MSBuildThisFileDirectory)Resources/Generated/dict.dat</JiebaDictionaryDat>
   </PropertyGroup>
@@ -25,7 +26,7 @@
     <MakeDir Directories="$(MSBuildThisFileDirectory)Resources/Generated" />
     <MSBuild Projects="$(JiebaDictionaryCompilerProject)"
              Targets="Restore;Build"
-             Properties="Configuration=$(Configuration);TargetFramework=$(TargetFramework)" />
+             Properties="Configuration=$(Configuration);TargetFramework=$(TargetFramework);RuntimeIdentifier=;SelfContained=false;OutputPath=$(JiebaDictionaryCompilerOutput)" />
     <Exec Command="dotnet &quot;$(JiebaDictionaryCompilerDll)&quot; &quot;$(JiebaDictionaryText)&quot; &quot;$(JiebaDictionaryDat)&quot;" />
   </Target>
 
