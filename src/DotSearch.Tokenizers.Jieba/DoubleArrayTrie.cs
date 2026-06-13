@@ -5,7 +5,7 @@ namespace DotSearch.Tokenizers.Jieba;
 
 internal sealed class DoubleArrayTrie
 {
-    private static readonly byte[] Magic = "DSDAT001"u8.ToArray();
+    private static readonly byte[] _magic = "DSDAT001"u8.ToArray();
 
     private readonly int[] _base;
     private readonly int[] _check;
@@ -37,9 +37,9 @@ internal sealed class DoubleArrayTrie
 
     public static DoubleArrayTrie Read(Stream stream, out int count, out long totalFrequency, out int maxTermLength)
     {
-        Span<byte> magic = stackalloc byte[Magic.Length];
+        Span<byte> magic = stackalloc byte[_magic.Length];
         ReadExactly(stream, magic);
-        if (!magic.SequenceEqual(Magic))
+        if (!magic.SequenceEqual(_magic))
         {
             throw new FormatException("Invalid DAT dictionary.");
         }

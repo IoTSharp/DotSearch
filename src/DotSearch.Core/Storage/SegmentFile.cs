@@ -6,8 +6,8 @@ namespace DotSearch.Storage;
 
 internal static class SegmentFile
 {
-    private static readonly byte[] MagicV1 = "DSSEG001"u8.ToArray();
-    private static readonly byte[] MagicV2 = "DSSEG002"u8.ToArray();
+    private static readonly byte[] _magicV1 = "DSSEG001"u8.ToArray();
+    private static readonly byte[] _magicV2 = "DSSEG002"u8.ToArray();
 
     public static SegmentReader Write(string segmentsDirectory, SegmentData data)
     {
@@ -17,7 +17,7 @@ internal static class SegmentFile
 
         using (FileStream stream = new(tempPath, FileMode.Create, FileAccess.Write, FileShare.None))
         {
-            stream.Write(MagicV2);
+            stream.Write(_magicV2);
             WriteInt64(stream, data.Id);
             VarInt.Write(stream, data.Documents.Count);
 
@@ -90,14 +90,14 @@ internal static class SegmentFile
     public static SegmentReader Read(string path)
     {
         using FileStream stream = new(path, FileMode.Open, FileAccess.Read, FileShare.Read);
-        Span<byte> magic = stackalloc byte[MagicV2.Length];
+        Span<byte> magic = stackalloc byte[_magicV2.Length];
         ReadExactly(stream, magic);
         bool hasPositions;
-        if (magic.SequenceEqual(MagicV2))
+        if (magic.SequenceEqual(_magicV2))
         {
             hasPositions = true;
         }
-        else if (magic.SequenceEqual(MagicV1))
+        else if (magic.SequenceEqual(_magicV1))
         {
             hasPositions = false;
         }
