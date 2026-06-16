@@ -160,6 +160,29 @@ public sealed class PersistentFullTextIndex : IFullTextIndex, IIndexStorage
     }
 
     /// <summary>
+    /// 枚举指定字段下所有活跃 segment 中出现过的 term，用于实现 fuzzy / wildcard 这类需要
+    /// 在索引侧做 term 展开的查询。返回的是去重后的快照，与并发写互斥。
+    /// 注意：由于不依赖 tombstone 信息，被全部 tombstone 的 term 也会出现在结果里——
+    /// 调用方在收集到候选 term 后通过 <see cref="Search(Query.Query, int)"/> 二次过滤即可。
+    /// </summary>
+    /// <param name="field">字段名。</param>
+    public IReadOnlyCollection<string> EnumerateTerms(string field)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(field);
+
+        lock (_lock)
+        {
+            HashSet<string> terms = new(StringComparer.Ordinal);
+            foreach (SegmentReader segment in _segments.Values)
+            {
+                foreach (string term in segment.EnumerateTerms(field))
+                    terms.Add(term);
+            }
+            return terms;
+        }
+    }
+
+    /// <summary>
     /// 同步执行一次段合并，将当前可见文档重写为单个不可变段。
     /// </summary>
     /// <returns>实际是否发生合并。</returns>

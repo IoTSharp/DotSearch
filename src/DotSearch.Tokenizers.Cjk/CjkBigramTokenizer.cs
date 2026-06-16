@@ -45,14 +45,19 @@ public sealed class CjkBigramTokenizer : ITokenizer
 
             if (isCjk)
             {
-                // 与下一个字符组成 bigram；行末单字符也单独输出。
+                // 优先用相邻两字符组成 bigram。
                 if (i + 1 < text.Length && IsCjk(text[i + 1]))
                 {
                     position++;
                     sink.Emit(text.Slice(i, 2), i, i + 2, 1);
                 }
-                else
+                else if (i == 0 || !IsCjk(text[i - 1]))
                 {
+                    // 当前 CJK 字符无法形成 bigram 且不属于已发射 bigram 的尾字
+                    // （前一字不是 CJK 或不存在）——这是孤立的 CJK 字符，发射 unigram。
+                    // 反之（前一字是 CJK）则该字已被上一个 bigram 覆盖，不再单独发射，
+                    // 保证查询端 "水泵" → [水泵] 与索引端 "水泵报警" → [水泵, 泵报, 报警]
+                    // 的 token 集合在公共前缀上对齐，AND-of-tokens 检索不会被尾字单 token 误杀。
                     position++;
                     sink.Emit(text.Slice(i, 1), i, i + 1, 1);
                 }

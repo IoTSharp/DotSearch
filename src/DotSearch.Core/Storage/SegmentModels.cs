@@ -108,6 +108,12 @@ internal sealed class SegmentReader
             && terms.TryGetValue(term, out postings!);
     }
 
+    /// <summary>列出本 segment 在指定字段下索引过的所有 term。</summary>
+    public IEnumerable<string> EnumerateTerms(string field)
+        => _postings.TryGetValue(field, out Dictionary<string, Dictionary<int, int>>? terms)
+            ? terms.Keys
+            : Array.Empty<string>();
+
     public bool TryGetFieldLengths(string field, out Dictionary<int, int> lengths)
     {
         return _fieldLengths.TryGetValue(field, out lengths!);
